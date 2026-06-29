@@ -16,7 +16,6 @@ interface FormState {
   confirmPassword: string;
   // Student
   full_name: string;
-  roll_number: string;
   branch: string;
   batch_year: string;
   enrollment_key: string;
@@ -34,7 +33,6 @@ const INITIAL_FORM: FormState = {
   password: "",
   confirmPassword: "",
   full_name: "",
-  roll_number: "",
   branch: "",
   batch_year: "",
   enrollment_key: "",
@@ -743,31 +741,18 @@ export default function SignupPage() {
                         />
                       </div>
 
-                      <div className="field-row">
-                        <div className="field">
-                          <label htmlFor="roll_number">Roll Number</label>
-                          <input
-                            id="roll_number"
-                            type="text"
-                            placeholder="CSE/21/001"
-                            value={form.roll_number}
-                            onChange={handleField("roll_number")}
-                            required
-                          />
-                        </div>
-                        <div className="field">
-                          <label htmlFor="batch_year">Batch Year</label>
-                          <input
-                            id="batch_year"
-                            type="number"
-                            placeholder="2025"
-                            value={form.batch_year}
-                            onChange={handleField("batch_year")}
-                            min="2000"
-                            max="2040"
-                            required
-                          />
-                        </div>
+                      <div className="field">
+                        <label htmlFor="batch_year">Passout Year</label>
+                        <input
+                          id="batch_year"
+                          type="number"
+                          placeholder="2025"
+                          value={form.batch_year}
+                          onChange={handleField("batch_year")}
+                          min="2000"
+                          max="2040"
+                          required
+                        />
                       </div>
 
                       <div className="field">
@@ -797,13 +782,6 @@ export default function SignupPage() {
                         />
                         <span className="hint">Ask your Training &amp; Placement Officer for this key.</span>
                       </div>
-
-                      <ImageUpload
-                        folder={CLD_FOLDERS.studentPhotos}
-                        label="Profile Photo"
-                        placeholder="Upload your photo (optional)"
-                        onUpload={(url) => setUploadedUrl(url)}
-                      />
                     </>
                   )}
 
@@ -897,19 +875,6 @@ export default function SignupPage() {
                           onChange={handleField("designation")}
                           required
                         />
-                      </div>
-
-                      <div className="field">
-                        <label htmlFor="enrollment_key">College Enrollment Key</label>
-                        <input
-                          id="enrollment_key"
-                          type="text"
-                          placeholder="Your college's admin key"
-                          value={form.enrollment_key}
-                          onChange={handleField("enrollment_key")}
-                          required
-                        />
-                        <span className="hint">Contact Robonics support to obtain your college key.</span>
                       </div>
                     </>
                   )}

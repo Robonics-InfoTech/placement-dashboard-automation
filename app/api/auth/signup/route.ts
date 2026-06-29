@@ -46,7 +46,7 @@ function validatePayload(
   }
 
   if (role === "student") {
-    const required = ["full_name", "roll_number", "branch", "batch_year", "enrollment_key"];
+    const required = ["full_name", "branch", "batch_year", "enrollment_key"];
     for (const field of required) {
       if (!b[field]) return { valid: false, error: `Missing field: ${field}` };
     }
@@ -60,7 +60,7 @@ function validatePayload(
   }
 
   if (role === "college_admin") {
-    const required = ["full_name", "designation", "enrollment_key"];
+    const required = ["full_name", "designation"];
     for (const field of required) {
       if (!b[field]) return { valid: false, error: `Missing field: ${field}` };
     }
@@ -148,7 +148,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
     const { error: e } = await supabaseAdmin.from("student_profiles").insert({
       user_id: userId,
       full_name: payload.full_name,
-      roll_number: payload.roll_number,
       branch: payload.branch,
       batch_year: payload.batch_year,
       ...(payload.photo_url ? { photo_url: payload.photo_url } : {}),
