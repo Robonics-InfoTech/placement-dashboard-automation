@@ -2,6 +2,8 @@
 
 import { useState, useCallback, FormEvent } from "react";
 import type { UserRole } from "@/types/auth";
+import ImageUpload from "@/components/ui/ImageUpload";
+import { CLD_FOLDERS } from "@/lib/cloudinary";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,6 +133,8 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successEmail, setSuccessEmail] = useState<string>("");
+  // Cloudinary upload URL (photo for student, logo for employer)
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
   const handleField = useCallback(
     (field: keyof FormState) =>
@@ -145,6 +149,7 @@ export default function SignupPage() {
     setSelectedRole(role);
     setStep("form");
     setError(null);
+    setUploadedUrl(null); // reset upload when switching roles
   };
 
   const handleBack = () => {
@@ -176,6 +181,7 @@ export default function SignupPage() {
         branch: form.branch,
         batch_year: parseInt(form.batch_year, 10),
         enrollment_key: form.enrollment_key,
+        ...(uploadedUrl ? { photo_url: uploadedUrl } : {}),
       };
     } else if (selectedRole === "employer") {
       payload = {
@@ -184,6 +190,7 @@ export default function SignupPage() {
         industry: form.industry,
         hq_location: form.hq_location,
         hr_contact_name: form.hr_contact_name,
+        ...(uploadedUrl ? { logo_url: uploadedUrl } : {}),
       };
     } else if (selectedRole === "college_admin") {
       payload = {
@@ -788,8 +795,15 @@ export default function SignupPage() {
                           onChange={handleField("enrollment_key")}
                           required
                         />
-                        <span className="hint">Ask your Training & Placement Officer for this key.</span>
+                        <span className="hint">Ask your Training &amp; Placement Officer for this key.</span>
                       </div>
+
+                      <ImageUpload
+                        folder={CLD_FOLDERS.studentPhotos}
+                        label="Profile Photo"
+                        placeholder="Upload your photo (optional)"
+                        onUpload={(url) => setUploadedUrl(url)}
+                      />
                     </>
                   )}
 
@@ -847,6 +861,13 @@ export default function SignupPage() {
                           required
                         />
                       </div>
+
+                      <ImageUpload
+                        folder={CLD_FOLDERS.employerLogos}
+                        label="Company Logo"
+                        placeholder="Upload your company logo (optional)"
+                        onUpload={(url) => setUploadedUrl(url)}
+                      />
                     </>
                   )}
 

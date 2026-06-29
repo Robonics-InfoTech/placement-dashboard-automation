@@ -14,7 +14,6 @@ function isValidEmail(email: string): boolean {
 }
 
 function isStrongPassword(password: string): boolean {
-  // Min 8 chars, at least one uppercase, one lowercase, one digit
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
 }
 
@@ -94,32 +93,39 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
   const { payload } = validation;
   const { email, password, role } = payload;
 
-  // 1. Create user in Supabase Auth (email_confirm=false so we control verification)
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: false, // We send the verification email ourselves via Resend
-    user_metadata: { role },
-  });
+  // 1. generateLink atomically creates the user in Supabase Auth AND returns a
+  //    hashed_token we use to build our own branded verification URL via Resend.
+  //    We do NOT call createUser separately — that would create a duplicate user
+  //    and cause a conflict when generateLink is called.
+  const { data: linkData, error: linkError } =
+    await supabaseAdmin.auth.admin.generateLink({
+      type: "signup",
+      email,
+      password,
+      options: {
+        data: { role }, // stored in user_metadata
+      },
+    });
 
-  if (authError) {
+  if (linkError) {
     const isDuplicate =
-      authError.message.toLowerCase().includes("already") ||
-      authError.message.toLowerCase().includes("exists") ||
-      authError.code === "email_exists";
+      linkError.message.toLowerCase().includes("already") ||
+      linkError.message.toLowerCase().includes("exists") ||
+      linkError.message.toLowerCase().includes("registered");
 
     return NextResponse.json(
       {
         success: false,
         message: isDuplicate
           ? "An account with this email already exists."
-          : "Failed to create account. Please try again.",
+          : `Failed to create account: ${linkError.message}`,
       },
       { status: isDuplicate ? 409 : 500 }
     );
   }
 
-  const userId = authData.user.id;
+  const userId = linkData.user.id;
+  const token = linkData.properties?.hashed_token;
 
   // 2. Insert the base users row (mirrors ERD `users` table)
   const { error: userRowError } = await supabaseAdmin.from("users").insert({
@@ -133,70 +139,63 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
   });
 
   if (userRowError) {
-    console.error("[signup] users insert error:", userRowError);
-    // Non-fatal if table doesn't exist yet (migration not run) — continue
+    // Non-fatal — table may not exist yet if migrations haven't run
+    console.error("[signup] users insert error:", userRowError.message);
   }
 
   // 3. Insert role-specific profile row
   if (payload.role === "student") {
-    await supabaseAdmin.from("student_profiles").insert({
+    const { error: e } = await supabaseAdmin.from("student_profiles").insert({
       user_id: userId,
       full_name: payload.full_name,
       roll_number: payload.roll_number,
       branch: payload.branch,
       batch_year: payload.batch_year,
+      ...(payload.photo_url ? { photo_url: payload.photo_url } : {}),
     });
+    if (e) console.error("[signup] student_profiles insert error:", e.message);
   }
 
   if (payload.role === "employer") {
-    await supabaseAdmin.from("employer_profiles").insert({
+    const { error: e } = await supabaseAdmin.from("employer_profiles").insert({
       user_id: userId,
       company_name: payload.company_name,
       industry: payload.industry,
       hq_location: payload.hq_location,
       hr_contact_name: payload.hr_contact_name,
       approval_status: "pending",
+      ...(payload.logo_url ? { logo_url: payload.logo_url } : {}),
     });
+    if (e) console.error("[signup] employer_profiles insert error:", e.message);
   }
 
   if (payload.role === "college_admin") {
-    await supabaseAdmin.from("college_admin_profiles").insert({
+    const { error: e } = await supabaseAdmin.from("college_admin_profiles").insert({
       user_id: userId,
       full_name: payload.full_name,
       designation: payload.designation,
     });
+    if (e) console.error("[signup] college_admin_profiles insert error:", e.message);
   }
 
-  // 4. Generate a Supabase sign-up OTP link and extract the token
-  const { data: linkData, error: linkError } =
-    await supabaseAdmin.auth.admin.generateLink({
-      type: "signup",
-      email,
-      password,
-    });
-
-  if (linkError || !linkData?.properties?.hashed_token) {
-    console.error("[signup] generateLink error:", linkError);
-    // Still succeed — user can request resend later
+  // 4. Send branded verification email via Resend
+  if (!token) {
+    console.warn("[signup] No hashed_token in generateLink response");
     return NextResponse.json(
       {
         success: true,
         message:
-          "Account created! We couldn't send the verification email automatically. Please contact support.",
+          "Account created! We couldn't generate a verification link. Please contact support.",
         userId,
       },
       { status: 201 }
     );
   }
 
-  const token = linkData.properties.hashed_token;
-
-  // 5. Send branded verification email via Resend
   try {
     await sendVerificationEmail(email, token, role);
   } catch (emailErr) {
     console.error("[signup] Email send failed:", emailErr);
-    // Non-fatal — account exists, user can request resend
     return NextResponse.json(
       {
         success: true,

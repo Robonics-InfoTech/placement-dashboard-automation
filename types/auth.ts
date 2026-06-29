@@ -12,7 +12,8 @@ export interface StudentSignupPayload extends BaseSignupPayload {
   roll_number: string;
   branch: string;
   batch_year: number;
-  enrollment_key: string; // college enrollment key
+  enrollment_key: string;
+  photo_url?: string; // Cloudinary secure_url (optional)
 }
 
 export interface EmployerSignupPayload extends BaseSignupPayload {
@@ -21,13 +22,14 @@ export interface EmployerSignupPayload extends BaseSignupPayload {
   industry: string;
   hq_location: string;
   hr_contact_name: string;
+  logo_url?: string; // Cloudinary secure_url (optional)
 }
 
 export interface CollegeAdminSignupPayload extends BaseSignupPayload {
   role: "college_admin";
   full_name: string;
   designation: string;
-  enrollment_key: string; // college enrollment key
+  enrollment_key: string;
 }
 
 export type SignupPayload =
