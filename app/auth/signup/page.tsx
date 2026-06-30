@@ -175,7 +175,6 @@ export default function SignupPage() {
       payload = {
         ...base,
         full_name: form.full_name,
-        roll_number: form.roll_number,
         branch: form.branch,
         batch_year: parseInt(form.batch_year, 10),
         enrollment_key: form.enrollment_key,
