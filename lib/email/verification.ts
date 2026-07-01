@@ -4,7 +4,7 @@ import type { UserRole } from "@/types/auth";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-const FROM = process.env.EMAIL_FROM ?? "PlacementHub <no-reply@placementhub.app>";
+const FROM = process.env.EMAIL_FROM ?? "onboarding@resend.dev";
 
 const ROLE_LABELS: Record<UserRole, string> = {
   student: "Student",
