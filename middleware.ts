@@ -7,71 +7,58 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!,
     {
       cookies: {
         get(name) {
           return request.cookies.get(name)?.value;
         },
-
         set(name, value, options) {
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+          request.cookies.set({ name, value, ...options });
+          response.cookies.set({ name, value, ...options });
         },
-
         remove(name, options) {
-          response.cookies.set({
-            name,
-            value: "",
-            ...options,
-            maxAge: 0,
-          });
+          request.cookies.set({ name, value: "", ...options });
+          response.cookies.set({ name, value: "", ...options, maxAge: 0 });
         },
       },
     }
   );
 
+  // Verify the JWT with Supabase — role is stored in user_metadata at signup.
+  // This avoids a DB round-trip and any RLS timing issues.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
 
-  let role: string | null = null;
-
-if (user) {
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  role = profile?.role ?? null;
-}
+  // Read role from the JWT user_metadata (set during admin.createUser at signup)
+  const role = (user?.user_metadata?.role as string | undefined) ?? null;
 
   const isProtectedRoute =
-  path.startsWith("/student") ||
-  path.startsWith("/employer") ||
-  path.startsWith("/admin");
+    path.startsWith("/student") ||
+    path.startsWith("/employer") ||
+    path.startsWith("/admin");
 
+  // Not logged in → redirect to login
   if (!user && isProtectedRoute) {
-  return NextResponse.redirect(
-    new URL("/auth/login", request.url)
-  );
-}
+    return NextResponse.redirect(new URL("/auth/login", request.url));
+  }
 
-if (
-  (path.startsWith("/student") && role !== "student") ||
-  (path.startsWith("/employer") && role !== "employer") ||
-  (path.startsWith("/admin") && role !== "college_admin")
-) {
-  return NextResponse.redirect(new URL("/", request.url));
-}
+  // Logged in but wrong role for the route → redirect to home
+  if (
+    user &&
+    (
+      (path.startsWith("/student")  && role !== "student") ||
+      (path.startsWith("/employer") && role !== "employer") ||
+      (path.startsWith("/admin")    && role !== "college_admin")
+    )
+  ) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
-return response;
+  return response;
 }
 
 export const config = {

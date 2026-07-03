@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { sendVerificationEmail } from "@/lib/email/verification";
+// TODO: Re-enable email verification once Resend sender domain is confirmed.
+// import { sendVerificationEmail } from "@/lib/email/verification";
 import type {
   SignupPayload,
   SignupApiResponse,
@@ -93,46 +94,41 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
   const { payload } = validation;
   const { email, password, role } = payload;
 
-  // 1. generateLink atomically creates the user in Supabase Auth AND returns a
-  //    hashed_token we use to build our own branded verification URL via Resend.
-  //    We do NOT call createUser separately — that would create a duplicate user
-  //    and cause a conflict when generateLink is called.
-  const { data: linkData, error: linkError } =
-    await supabaseAdmin.auth.admin.generateLink({
-      type: "signup",
+  // TODO: Re-enable generateLink + sendVerificationEmail when Resend is configured.
+  // 1. Create user in Supabase Auth with email auto-confirmed (dev mode — no email verification).
+  const { data: createData, error: createError } =
+    await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { role }, // stored in user_metadata
-      },
+      email_confirm: true, // ← skips email verification entirely
+      user_metadata: { role },
     });
 
-  if (linkError) {
+  if (createError) {
     const isDuplicate =
-      linkError.message.toLowerCase().includes("already") ||
-      linkError.message.toLowerCase().includes("exists") ||
-      linkError.message.toLowerCase().includes("registered");
+      createError.message.toLowerCase().includes("already") ||
+      createError.message.toLowerCase().includes("exists") ||
+      createError.message.toLowerCase().includes("registered");
 
     return NextResponse.json(
       {
         success: false,
         message: isDuplicate
           ? "An account with this email already exists."
-          : `Failed to create account: ${linkError.message}`,
+          : `Failed to create account: ${createError.message}`,
       },
       { status: isDuplicate ? 409 : 500 }
     );
   }
 
-  const userId = linkData.user.id;
-  const token = linkData.properties?.hashed_token;
+  const userId = createData.user.id;
 
   // 2. Insert the base users row (mirrors ERD `users` table)
   const { error: userRowError } = await supabaseAdmin.from("users").insert({
     id: userId,
     email,
     role,
-    email_verified: false,
+    email_verified: true, // auto-confirmed
     is_active: true,
     is_suspended: false,
     failed_login_attempts: 0,
@@ -177,39 +173,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
     if (e) console.error("[signup] college_admin_profiles insert error:", e.message);
   }
 
-  // 4. Send branded verification email via Resend
-  if (!token) {
-    console.warn("[signup] No hashed_token in generateLink response");
-    return NextResponse.json(
-      {
-        success: true,
-        message:
-          "Account created! We couldn't generate a verification link. Please contact support.",
-        userId,
-      },
-      { status: 201 }
-    );
-  }
-
-  try {
-    await sendVerificationEmail(email, token, role);
-  } catch (emailErr) {
-    console.error("[signup] Email send failed:", emailErr);
-    return NextResponse.json(
-      {
-        success: true,
-        message:
-          "Account created, but we couldn't deliver your verification email. Please try resending.",
-        userId,
-      },
-      { status: 201 }
-    );
-  }
+  // TODO: Step 4 — send branded verification email via Resend (re-enable later).
+  // const token = ...; await sendVerificationEmail(email, token, role);
 
   return NextResponse.json(
     {
       success: true,
-      message: "Account created! Check your inbox to verify your email.",
+      message: "Account created! You can now log in.",
       userId,
     },
     { status: 201 }

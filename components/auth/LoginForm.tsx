@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
 const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState("");
-const router = useRouter();
 
 const handleLogin = async (
   e: React.FormEvent<HTMLFormElement>
@@ -31,36 +29,34 @@ const handleLogin = async (
   }
 
 const user = data.user;
-const { data: profile, error: profileError } = await supabase
-  .from("users")
-  .select("role")
-  .eq("id", user.id)
-  .single();
 
-if (profileError) {
-  setError("Unable to fetch your profile.");
+// Role is stored in user_metadata at signup — no extra DB round-trip needed,
+// and avoids RLS timing issues right after session creation.
+const role = user.user_metadata?.role as string | undefined;
+
+if (!role) {
+  setError("Unable to determine your role. Please contact support.");
   setLoading(false);
   return;
 }
 
-switch (profile.role) {
+switch (role) {
   case "student":
-    router.push("/student/dashboard");
+    window.location.href = "/student/dashboard";
     break;
 
   case "employer":
-    router.push("/employer/dashboard");
+    window.location.href = "/employer/dashboard";
     break;
 
   case "college_admin":
-    router.push("/admin/dashboard");
+    window.location.href = "/admin/dashboard";
     break;
 
   default:
     setError("Invalid user role.");
+    setLoading(false);
 }
-
-setLoading(false);
 
 };
 
