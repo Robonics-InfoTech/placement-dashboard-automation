@@ -232,6 +232,15 @@ color:#818CF8;
 text-decoration:none;
 font-weight:600;
 }
+
+.error-alert {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: white;
+}
       `}</style>
 
       <div className="signup-root">
