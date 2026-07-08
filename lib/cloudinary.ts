@@ -21,12 +21,10 @@ export const cld = new Cloudinary({
  * Cloudinary upload folders — keep assets organised.
  */
 export const CLD_FOLDERS = {
-  studentPhotos:  "placementhub/students/photos",
-  employerLogos:  "placementhub/employers/logos",
-  adminPhotos:    "placementhub/admins/photos",
-  resumes:        "placementhub/documents/resumes",
-  marksheets:     "placementhub/documents/marksheets",
-  certifications: "placementhub/documents/certifications",
+  studentPhotos: "placementhub/students/photos",
+  employerLogos: "placementhub/employers/logos",
+  adminPhotos: "placementhub/admins/photos",
+  resumes: "placementhub/documents/resumes",
 } as const;
 
 export type CldFolder = (typeof CLD_FOLDERS)[keyof typeof CLD_FOLDERS];
