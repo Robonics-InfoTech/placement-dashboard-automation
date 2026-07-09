@@ -8,6 +8,10 @@ import RecentApplications from "./RecentApplications";
 import UpcomingDeadlines from "./UpcomingDeadlines";
 import ProfileStrength from "./ProfileStrength";
 
+import Link from "next/link";
+import QuickActions from "./QuickActions";
+
+
 /* ─── tiny icon SVGs ─────────────────────────────────────────────────────── */
 const IconBriefcase = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -37,10 +41,42 @@ const IconLogOut = () => (
 
 /* ─── nav items ─────────────────────────────────────────────────────────── */
 const NAV = [
-  { label: "Dashboard", icon: <IconBriefcase />, active: true },
-  { label: "My Profile",  icon: <IconUser /> },
-  { label: "Job Board",   icon: <IconBookOpen /> },
-  { label: "Notifications", icon: <IconBell />, badge: 3 },
+  {
+    label: "Dashboard",
+    href: "/student/dashboard",
+    icon: <IconBriefcase />,
+  },
+  {
+    label: "My Profile",
+    href: "/student/profile",
+    icon: <IconUser />,
+  },
+  {
+    label: "Job Board",
+    href: "/student/jobs",
+    icon: <IconBookOpen />,
+  },
+  {
+    label: "Documents",
+    href: "/student/documents",
+    icon: <IconBookOpen />,
+  },
+  {
+    label: "Applications",
+    href: "/student/applications",
+    icon: <IconBriefcase />,
+  },
+  {
+    label: "Offers",
+    href: "/student/offers",
+    icon: <IconBriefcase />,
+  },
+  {
+    label: "Notifications",
+    href: "/student/notifications",
+    icon: <IconBell />,
+    badge: 3,
+  },
 ];
 
 export default function StudentDashboard() {
@@ -246,14 +282,22 @@ export default function StudentDashboard() {
           </div>
 
           <nav className="sd-nav">
-            {NAV.map((n) => (
-              <div key={n.label} className={`sd-nav-item${n.active ? " active" : ""}`}>
-                {n.icon}
-                {n.label}
-                {n.badge && <span className="sd-badge">{n.badge}</span>}
-              </div>
-            ))}
-          </nav>
+{NAV.map((n) => (
+  <Link
+    key={n.label}
+    href={n.href}
+    className="sd-nav-item"
+  >
+    {n.icon}
+    {n.label}
+
+    {n.badge && (
+      <span className="sd-badge">
+        {n.badge}
+      </span>
+    )}
+  </Link>
+))}          </nav>
 
           <div style={{ padding: "0 0 12px" }}>
             <div className="sd-user">
@@ -285,7 +329,13 @@ export default function StudentDashboard() {
 {/* Content */}
 <div className="sd-content">
 
-  <DashboardStats />
+<DashboardStats
+  stats={dashboardStats}
+  availableJobs={availableJobs}
+  profileStrength={profileStrength}
+/>
+
+  <QuickActions />
 
   <div className="sd-grid2">
 

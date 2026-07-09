@@ -1,20 +1,21 @@
 "use client";
 
 type DashboardStatsProps = {
-  stats: {
+  stats?: {
     applied: number;
     shortlisted: number;
     selected: number;
     rejected: number;
   } | null;
-  availableJobs: number;
-  profileStrength: number;
+
+  availableJobs?: number;
+  profileStrength?: number;
 };
 
 export default function DashboardStats({
   stats,
-  availableJobs,
-  profileStrength,
+  availableJobs = 0,
+  profileStrength = 0,
 }: DashboardStatsProps) {
   const cards = [
     {
