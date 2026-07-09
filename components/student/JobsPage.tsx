@@ -282,7 +282,7 @@ if (sortBy === "latest") {
 >
   View Details
 </Link>
-
+ 
     </div>
 
   </div>

@@ -4,14 +4,16 @@ export async function getStudentProfile(userId: string) {
   const { data, error } = await supabase
     .from("student_profiles")
     .select("*")
-    .eq("user_id", userId)
-    .single();
+    .eq("user_id", userId);
 
-    
+  console.log("PROFILE DATA:", data);
+  console.log("PROFILE ERROR:", error);
+
   if (error) throw error;
 
-  return data;
+  return data?.[0] ?? null;
 }
+
 export async function updateStudentProfile(
   userId: string,
   updates: {
