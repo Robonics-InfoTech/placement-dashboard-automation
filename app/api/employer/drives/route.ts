@@ -24,8 +24,9 @@ export async function GET() {
 
   if (!profile) return NextResponse.json({ success: true, data: [] });
 
+  // Real table: placement_drives (not drives)
   const { data, error: dbErr } = await supabaseAdmin
-    .from("drives")
+    .from("placement_drives")
     .select("*, drive_jobs(job_id)")
     .eq("employer_id", profile.id)
     .order("drive_date", { ascending: true });
@@ -57,15 +58,19 @@ export async function POST(req: NextRequest) {
     if (!body[f]) return NextResponse.json({ success: false, message: `Missing field: ${f}` }, { status: 422 });
   }
 
-  // Insert drive
+  // venue_type from our form: 'physical' | 'virtual'
+  // Real table drive_mode: 'online' | 'offline' | 'hybrid'
+  const driveMode = body.venue_type === "virtual" ? "online" : "offline";
+
+  // Real table: placement_drives — columns: drive_name, drive_mode, drive_date, venue
   const { data: drive, error: driveErr } = await supabaseAdmin
-    .from("drives")
+    .from("placement_drives")
     .insert({
       employer_id:     profile.id,
       college_id:      profile.college_id,
-      name:            body.name,
+      drive_name:      body.name,
       drive_date:      body.drive_date,
-      venue_type:      body.venue_type,
+      drive_mode:      driveMode,
       venue:           body.venue,
       rounds_schedule: body.rounds_schedule ?? [],
       max_students:    body.max_students ?? null,
@@ -78,7 +83,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: driveErr?.message ?? "Insert failed." }, { status: 500 });
   }
 
-  // Link jobs via drive_jobs junction
+  // Link jobs via drive_jobs junction (drive_id + job_id — real table already has this structure)
   const jobIds = (body.job_ids as string[]) ?? [];
   if (jobIds.length > 0) {
     await supabaseAdmin

@@ -54,12 +54,12 @@ export default async function EmployerDashboard() {
   const approvalStatus  = (profile?.approval_status ?? "pending") as "pending" | "approved" | "rejected";
   const isApproved      = approvalStatus === "approved";
 
-  // ── Parallel data fetch (only if approved — otherwise counts are 0) ─────
+  // ── Parallel data fetch ─────────────────────────────────────────────────
   const [jobsRes, drivesRes, applicationsRes] = await Promise.all([
     employerId
       ? supabase
-          .from("job_postings")
-          .select("id, title, status, deadline, created_at")
+          .from("jobs")                                   // real table
+          .select("id, title, status, application_deadline, created_at")
           .eq("employer_id", employerId)
           .order("created_at", { ascending: false })
           .limit(5)
@@ -67,8 +67,8 @@ export default async function EmployerDashboard() {
 
     employerId
       ? supabase
-          .from("drives")
-          .select("id, name, drive_date, status, venue_type")
+          .from("placement_drives")                       // real table
+          .select("id, drive_name, drive_date, status, drive_mode")
           .eq("employer_id", employerId)
           .gte("drive_date", new Date().toISOString())
           .order("drive_date")
@@ -78,12 +78,11 @@ export default async function EmployerDashboard() {
     employerId
       ? supabase
           .from("applications")
-          .select("id, status, applied_at, job_id")
+          .select("id, application_status, applied_at, job_id")
           .in(
             "job_id",
-            // sub-select job IDs for this employer
             (await supabase
-              .from("job_postings")
+              .from("jobs")                               // real table
               .select("id")
               .eq("employer_id", employerId ?? "")
             ).data?.map((j: { id: string }) => j.id) ?? []
@@ -96,13 +95,14 @@ export default async function EmployerDashboard() {
   const applications = applicationsRes.data ?? [];
 
   // ── Compute stats ───────────────────────────────────────────────────────
-  const activeJobs    = jobs.filter((j) => j.status === "active").length;
+  // 'published' = active in real schema
+  const activeJobs    = jobs.filter((j) => j.status === "published").length;
   const now           = new Date();
   const monthStart    = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const applicantsThisMonth = applications.filter(
     (a) => a.applied_at >= monthStart
   ).length;
-  const pendingReview = applications.filter((a) => a.status === "applied").length;
+  const pendingReview = applications.filter((a) => a.application_status === "applied").length;
 
   const fmt = (iso: string) =>
     new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -224,7 +224,7 @@ export default async function EmployerDashboard() {
                 <div className="epd-job-row" key={j.id}>
                   <div style={{ flex: 1 }}>
                     <div className="epd-job-title">{j.title}</div>
-                    <div className="epd-job-deadline">Deadline: {fmt(j.deadline)}</div>
+                    <div className="epd-job-deadline">Deadline: {fmt(j.application_deadline)}</div>
                   </div>
                   <StatusChip status={j.status} size="sm" />
                 </div>
@@ -243,13 +243,13 @@ export default async function EmployerDashboard() {
             ) : (
               drives.map((d) => (
                 <div className="epd-drive-item" key={d.id}>
-                  <div className="epd-drive-name">{d.name}</div>
+                  <div className="epd-drive-name">{d.drive_name}</div>
                   <div className="epd-drive-meta">
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <ICal />{fmt(d.drive_date)}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <IUsers />{d.venue_type === "virtual" ? "Virtual" : "Physical"}
+                      <IUsers />{d.drive_mode === "online" ? "Virtual" : "Physical"}
                     </span>
                   </div>
                   <div style={{ marginTop: "8px" }}>

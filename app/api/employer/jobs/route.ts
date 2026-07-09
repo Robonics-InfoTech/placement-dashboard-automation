@@ -31,9 +31,10 @@ export async function GET() {
     return NextResponse.json({ success: true, data: [] });
   }
 
+  // Real table: jobs (not job_postings)
   const { data, error: dbErr } = await supabaseAdmin
-    .from("job_postings")
-    .select("*")
+    .from("jobs")
+    .select("*, applications(count)")
     .eq("employer_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -51,10 +52,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify approval gate
   const { data: profile } = await supabaseAdmin
     .from("employer_profiles")
-    .select("id, approval_status, college_id")
+    .select("id, approval_status, college_id, company_name")
     .eq("user_id", user.id)
     .single();
 
@@ -63,10 +63,7 @@ export async function POST(req: NextRequest) {
   }
   // TODO: Restore approval gate after testing
   // if (profile.approval_status !== "approved") {
-  //   return NextResponse.json(
-  //     { success: false, message: "Your account must be approved before posting jobs." },
-  //     { status: 403 }
-  //   );
+  //   return NextResponse.json({ success: false, message: "Your account must be approved before posting jobs." }, { status: 403 });
   // }
 
   let body: Record<string, unknown>;
@@ -76,7 +73,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
   }
 
-  // Validate required fields
   const required = ["title", "description", "job_type", "location", "openings", "deadline"];
   for (const f of required) {
     if (!body[f]) {
@@ -84,7 +80,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Validate deadline is in the future
   const deadline = new Date(body.deadline as string);
   if (isNaN(deadline.getTime()) || deadline <= new Date()) {
     return NextResponse.json(
@@ -93,23 +88,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { error: insertErr } = await supabaseAdmin.from("job_postings").insert({
-    employer_id:      profile.id,
-    college_id:       profile.college_id,
-    title:            body.title,
-    description:      body.description,
-    job_type:         body.job_type,
-    location:         body.location,
-    ctc_min:          body.ctc_min ?? null,
-    ctc_max:          body.ctc_max ?? null,
-    openings:         Number(body.openings),
-    deadline:         body.deadline,
-    min_cgpa:         Number(body.min_cgpa ?? 0),
-    allowed_branches: body.allowed_branches ?? [],
-    max_backlogs:     Number(body.max_backlogs ?? 0),
-    batch_years:      body.batch_years ?? [],
-    selection_rounds: body.selection_rounds ?? [],
-    status:           "pending_approval",
+  // Real table: jobs
+  // Column mappings: min_cgpa→minimum_cgpa, max_backlogs→maximum_backlogs,
+  //   deadline→application_deadline, allowed_branches→eligible_branches,
+  //   batch_years→eligible_graduation_years, status: 'draft' (pending_approval)
+  const { error: insertErr } = await supabaseAdmin.from("jobs").insert({
+    employer_id:                profile.id,
+    college_id:                 profile.college_id,
+    company_name:               profile.company_name,
+    title:                      body.title,
+    description:                body.description,
+    job_type:                   "placement",                 // existing check: placement/internship/project/hackathon/alumni
+    employment_type:            body.job_type === "internship" ? "internship" : "full_time",
+    location:                   body.location,
+    ctc_min:                    body.ctc_min ?? null,
+    ctc_max:                    body.ctc_max ?? null,
+    salary_package:             body.ctc_max ?? body.ctc_min ?? null,
+    openings:                   Number(body.openings),
+    application_deadline:       body.deadline,
+    minimum_cgpa:               Number(body.min_cgpa ?? 0),
+    eligible_branches:          body.allowed_branches ?? [],
+    maximum_backlogs:           Number(body.max_backlogs ?? 0),
+    eligible_graduation_years:  body.batch_years ?? [],
+    selection_rounds:           body.selection_rounds ?? [],
+    status:                     "draft",                     // 'draft' = pending_approval
   });
 
   if (insertErr) {

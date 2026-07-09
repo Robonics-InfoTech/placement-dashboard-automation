@@ -28,18 +28,14 @@ export async function PATCH(
   try { body = await req.json(); }
   catch { return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 }); }
 
-  // Rejection requires a reason
   if (body.status === "rejected" && !body.rejection_reason?.trim()) {
-    return NextResponse.json(
-      { success: false, message: "A rejection reason is required." },
-      { status: 422 }
-    );
+    return NextResponse.json({ success: false, message: "A rejection reason is required." }, { status: 422 });
   }
 
-  // Fetch current application to verify ownership and get from_status
+  // Real columns: application_status (not status), join via jobs (not job_postings)
   const { data: app } = await supabaseAdmin
     .from("applications")
-    .select("status, job_id, student_id, jobs:job_postings(employer_id)")
+    .select("application_status, job_id, student_id, jobs(employer_id)")
     .eq("id", appId)
     .single();
 
@@ -50,17 +46,16 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 403 });
   }
 
-  const fromStatus = app.status;
+  const fromStatus = app.application_status;
 
-  // Update application
+  // Real column: application_status
   const updatePayload: Record<string, unknown> = {
-    status: body.status,
+    application_status: body.status,
     updated_at: new Date().toISOString(),
   };
   if (body.status === "rejected") {
     updatePayload.rejection_reason = body.rejection_reason;
   }
-  // Advance round counter for round_N statuses
   if (body.status.startsWith("round_")) {
     const roundNum = parseInt(body.status.split("_")[1] ?? "1");
     updatePayload.current_round = roundNum;
@@ -73,25 +68,25 @@ export async function PATCH(
 
   if (updateErr) return NextResponse.json({ success: false, message: updateErr.message }, { status: 500 });
 
-  // Write audit log
+  // Audit log — real columns: user_id (not acting_user_id), entity_name (not entity_type)
   await supabaseAdmin.from("audit_logs").insert({
-    entity_type:    "application",
-    entity_id:      appId,
-    action:         "status_change",
-    acting_user_id: user.id,
-    from_status:    fromStatus,
-    to_status:      body.status,
-    notes:          body.rejection_reason ?? null,
+    entity_name:  "application",
+    entity_id:    appId,
+    action:       "status_change",
+    user_id:      user.id,
+    from_status:  fromStatus,
+    to_status:    body.status,
+    notes:        body.rejection_reason ?? null,
   });
 
-  // Create in-app notification for student if rejected
+  // Notification — real columns: message (not body), notification_type (not type)
   if (body.status === "rejected") {
     await supabaseAdmin.from("notifications").insert({
-      user_id: app.student_id,
-      type:    "rejection",
-      title:   "Application Update",
-      body:    `Your application status has been updated: Application Unsuccessful. ${body.rejection_reason ? `Reason: ${body.rejection_reason}` : ""}`,
-      link:    "/student/applications",
+      user_id:           app.student_id,
+      notification_type: "rejection",
+      title:             "Application Update",
+      message:           `Your application status has been updated: Application Unsuccessful.${body.rejection_reason ? ` Reason: ${body.rejection_reason}` : ""}`,
+      link:              "/student/applications",
     });
   }
 

@@ -27,9 +27,10 @@ export async function GET(req: NextRequest) {
   const dayStart = `${date}T00:00:00.000Z`;
   const dayEnd   = `${date}T23:59:59.999Z`;
 
+  // Real table: placement_drives, column: drive_name (not name)
   const { data: conflicting } = await supabaseAdmin
-    .from("drives")
-    .select("id, name, drive_date, status")
+    .from("placement_drives")
+    .select("id, drive_name, drive_date, status")
     .eq("college_id", collegeId)
     .gte("drive_date", dayStart)
     .lte("drive_date", dayEnd)
