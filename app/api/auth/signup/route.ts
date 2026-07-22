@@ -54,7 +54,7 @@ function validatePayload(
   }
 
   if (role === "employer") {
-    const required = ["company_name", "industry", "hq_location", "hr_contact_name"];
+    const required = ["company_name", "industry"];
     for (const field of required) {
       if (!b[field]) return { valid: false, error: `Missing field: ${field}` };
     }
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
       user_id: userId,
       full_name: payload.full_name,
       branch: payload.branch,
-      batch_year: payload.batch_year,
+      graduation_year: payload.batch_year,
       ...(payload.photo_url ? { photo_url: payload.photo_url } : {}),
     });
     if (e) console.error("[signup] student_profiles insert error:", e.message);
@@ -156,9 +156,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<SignupApiResp
       user_id: userId,
       company_name: payload.company_name,
       industry: payload.industry,
-      hq_location: payload.hq_location,
-      hr_contact_name: payload.hr_contact_name,
-      approval_status: "pending",
       ...(payload.logo_url ? { logo_url: payload.logo_url } : {}),
     });
     if (e) console.error("[signup] employer_profiles insert error:", e.message);

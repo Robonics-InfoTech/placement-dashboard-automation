@@ -19,8 +19,6 @@ export interface EmployerSignupPayload extends BaseSignupPayload {
   role: "employer";
   company_name: string;
   industry: string;
-  hq_location: string;
-  hr_contact_name: string;
   logo_url?: string; // Cloudinary secure_url (optional)
 }
 

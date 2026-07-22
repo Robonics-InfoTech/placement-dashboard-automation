@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getDashboardStats, getAvailableJobsCount } from "@/lib/student/dashboard";
 
 import DashboardStats from "./DashboardStats";
 import RecentApplications from "./RecentApplications";
@@ -82,6 +83,14 @@ const NAV = [
 export default function StudentDashboard() {
   const [user, setUser] = useState<{ email: string; metadata: Record<string, string> } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<{
+    applied: number;
+    shortlisted: number;
+    selected: number;
+    rejected: number;
+  } | null>(null);
+  const [availableJobs, setAvailableJobs] = useState(0);
+  const [profileStrength, setProfileStrength] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -90,6 +99,42 @@ export default function StudentDashboard() {
           email: data.user.email ?? "",
           metadata: (data.user.user_metadata ?? {}) as Record<string, string>,
         });
+
+        // Fetch dashboard data once we have the user
+        supabase
+          .from("student_profiles")
+          .select("id, full_name, phone, branch, cgpa, graduation_year, resume_url, linkedin_url, github_url, portfolio_url")
+          .eq("user_id", data.user.id)
+          .single()
+          .then(async ({ data: profile }) => {
+            // Fetch stats using student profile id
+            if (profile?.id) {
+              getDashboardStats(profile.id).then(setDashboardStats).catch(console.error);
+            }
+
+            // Compute profile strength (same logic as ProfileStrength component)
+            const { data: skills } = await supabase
+              .from("student_skills")
+              .select("id")
+              .eq("student_id", profile?.id);
+
+            const checks = [
+              !!profile?.full_name,
+              !!profile?.phone,
+              !!profile?.branch,
+              profile?.cgpa != null,
+              profile?.graduation_year != null,
+              !!profile?.resume_url,
+              !!profile?.linkedin_url,
+              !!profile?.github_url,
+              !!profile?.portfolio_url,
+              (skills?.length ?? 0) > 0,
+            ];
+            setProfileStrength(checks.filter(Boolean).length * 10);
+          });
+
+        // Fetch available jobs count
+        getAvailableJobsCount().then(setAvailableJobs).catch(console.error);
       }
     });
   }, []);
