@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import StatusChip from "@/components/employer/StatusChip";
 
 
 /* ── icon helpers ─────────────────────────────────────────────────────── */
