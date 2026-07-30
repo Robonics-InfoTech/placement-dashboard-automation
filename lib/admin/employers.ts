@@ -1,13 +1,15 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export async function getPendingEmployers() {
+export async function getEmployers() {
   const { data, error } = await supabaseAdmin
     .from("employer_profiles")
     .select("*")
-    .eq("verified", false)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data ?? [];
 }

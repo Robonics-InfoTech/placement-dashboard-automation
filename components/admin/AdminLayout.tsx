@@ -1,39 +1,69 @@
-"use client";
+import AdminLayout from "@/components/admin/AdminLayout";
+import EmployersTable from "@/components/admin/employers/EmployersTable";
+import EmployerTabs from "@/components/admin/employers/EmployerTabs";
+import { getEmployers } from "@/lib/admin/employers";
 
-import { ReactNode } from "react";
-import AdminSidebar from "./AdminSidebar";
-import AdminTopbar from "./AdminTopbar";
+export default async function EmployersPage() {
+  const employers = await getEmployers();
 
-interface AdminLayoutProps {
-  title: string;
-  children: ReactNode;
-}
+  const total = employers.length;
+  const verified = employers.filter((e) => e.verified).length;
+  const pending = total - verified;
 
-export default function AdminLayout({
-  title,
-  children,
-}: AdminLayoutProps) {
   return (
-    <div className="flex h-screen bg-slate-950">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-72">
-        <AdminSidebar />
-      </aside>
+    <AdminLayout title="Employer Management">
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-white">
+            Employer Management
+          </h1>
 
-      {/* Main Area */}
-      <div className="ml-72 flex min-w-0 flex-1 flex-col">
-        {/* Topbar */}
-        <header className="sticky top-0 z-30">
-          <AdminTopbar title={title} />
-        </header>
+          <p className="mt-2 text-slate-400">
+            Manage employer registrations and approvals.
+          </p>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-slate-950 p-6">
-          <div className="w-full">
-            {children}
+          <div className="mt-6">
+            <EmployerTabs />
           </div>
-        </main>
+        </div>
+
+        {/* Statistics */}
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-sm text-slate-400">
+              Total Employers
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-blue-400">
+              {total}
+            </h2>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-sm text-slate-400">
+              Active Employers
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-green-400">
+              {verified}
+            </h2>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-sm text-slate-400">
+              Pending Approval
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-yellow-400">
+              {pending}
+            </h2>
+          </div>
+        </div>
+
+        {/* Employers Table */}
+        <EmployersTable employers={employers} />
       </div>
-    </div>
+    </AdminLayout>
   );
 }

@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export async function approveEmployer(id: string) {
+export async function approveJob(id: string) {
   const { error } = await supabaseAdmin
-    .from("employer_profiles")
+    .from("jobs")
     .update({
-      verified: true,
-      deleted_at: null,
+      status: "published",
     })
     .eq("id", id);
 
@@ -16,14 +15,14 @@ export async function approveEmployer(id: string) {
     throw error;
   }
 
-  revalidatePath("/admin/employers");
+  revalidatePath("/admin/jobs");
 }
 
-export async function rejectEmployer(id: string) {
+export async function rejectJob(id: string) {
   const { error } = await supabaseAdmin
-    .from("employer_profiles")
+    .from("jobs")
     .update({
-      deleted_at: new Date().toISOString(),
+      status: "rejected",
     })
     .eq("id", id);
 
@@ -31,5 +30,5 @@ export async function rejectEmployer(id: string) {
     throw error;
   }
 
-  revalidatePath("/admin/employers");
+  revalidatePath("/admin/jobs");
 }
