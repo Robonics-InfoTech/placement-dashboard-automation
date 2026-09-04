@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import AppShell from "@/components/layout/AppShell";
 import type { UserRole } from "@/types/auth";
 
-export default async function EmployerLayout({
+export default async function StudentLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -31,21 +31,13 @@ export default async function EmployerLayout({
     redirect("/auth/login");
   }
 
-  const role = (user.user_metadata?.role as UserRole) ?? "employer";
-  const fullName = (user.user_metadata?.full_name as string) ?? user.email?.split("@")[0] ?? "Employer";
+  const role = (user.user_metadata?.role as UserRole) ?? "student";
+  const fullName = (user.user_metadata?.full_name as string) ?? user.email?.split("@")[0] ?? "Student";
   const email = user.email ?? "";
-
-  // Fetch employer profile for company name
-  const { data: profile } = await supabase
-    .from("employer_profiles")
-    .select("company_name")
-    .eq("user_id", user.id)
-    .single();
-
-  const companyName = profile?.company_name ?? undefined;
+  const orgName = (user.user_metadata?.college_name as string) ?? undefined;
 
   return (
-    <AppShell role={role} userName={fullName} userEmail={email} orgName={companyName}>
+    <AppShell role={role} userName={fullName} userEmail={email} orgName={orgName}>
       {children}
     </AppShell>
   );

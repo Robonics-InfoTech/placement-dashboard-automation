@@ -10,6 +10,9 @@ const ROLE_LABELS: Record<UserRole, string> = {
   student: "Student",
   employer: "Employer",
   college_admin: "College Admin",
+  alumni: "Alumni",
+  placement_committee: "Placement Committee",
+  super_admin: "Super Admin",
 };
 
 function buildVerificationLink(token: string, email: string): string {

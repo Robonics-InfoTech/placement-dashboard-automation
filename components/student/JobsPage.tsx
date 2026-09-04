@@ -1,291 +1,257 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  getPublishedJobs,
-  getStudentProfile,
-} from "@/lib/student/jobs";
-
 import { supabase } from "@/lib/supabase/client";
+import { useDataSync } from "@/lib/hooks/useDataSync";
 import Link from "next/link";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import StatusBadge from "@/components/ui/StatusBadge";
+import PageHeader from "@/components/ui/PageHeader";
+import { MapPin, Banknote, Calendar, Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 export default function JobsPage() {
-const [jobs, setJobs] = useState<any[]>([]);
-const [filteredJobs, setFilteredJobs] = useState<any[]>([]);
-const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
 
-const [search, setSearch] = useState("");
-const [locationFilter, setLocationFilter] = useState("");
-const [jobTypeFilter, setJobTypeFilter] = useState("");
-const [employmentFilter, setEmploymentFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [jobTypeFilter, setJobTypeFilter] = useState("");
+  const [employmentFilter, setEmploymentFilter] = useState("");
+  const [sortBy, setSortBy] = useState("deadline");
 
-const [sortBy, setSortBy] = useState("deadline");
-const [profile, setProfile] = useState<any>(null);
+  const { fetchWithFallback, isOffline } = useDataSync();
 
   useEffect(() => {
     loadJobs();
   }, []);
 
-async function loadJobs() {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  async function loadJobs() {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    if (!user) return;
+      // Use offline fallback hook for fetching jobs
+      const jobsPromise = supabase
+        .from("jobs")
+        .select("*")
+        .eq("status", "published")
+        .is("deleted_at", null)
+        .order("application_deadline", { ascending: true });
 
-    const [jobsData, profileData] = await Promise.all([
-      getPublishedJobs(),
-      getStudentProfile(user.id),
-    ]);
+      const [jobsResponse, profileResponse] = await Promise.all([
+        fetchWithFallback("jobs", jobsPromise),
+        fetchWithFallback("profiles", supabase.from("student_profiles").select("*").eq("user_id", user.id).single())
+      ]);
 
-    setJobs(jobsData);
-    setFilteredJobs(jobsData);
-    setProfile(profileData);
-  } finally {
-    setLoading(false);
-  }
-}
-
-function isEligible(job: any) {
-  if (!profile) return false;
-
-  const cgpa =
-    Number(profile.cgpa) >= Number(job.minimum_cgpa);
-
-  const backlogs =
-    profile.active_backlogs <= job.maximum_backlogs;
-
-  const branch =
-    job.eligible_branches?.includes(profile.branch);
-
-  const graduation =
-    job.eligible_graduation_years?.includes(
-      profile.graduation_year
-    );
-
-  return cgpa && backlogs && branch && graduation;
-}
-
-useEffect(() => {
-  let filtered = [...jobs];
-
-  if (search) {
-    filtered = filtered.filter(
-      (job) =>
-        job.title.toLowerCase().includes(search.toLowerCase()) ||
-        job.company_name.toLowerCase().includes(search.toLowerCase())
-    );
+      if (jobsResponse.data) setJobs(jobsResponse.data as any[]);
+      if (profileResponse.data) setProfile(profileResponse.data);
+      
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if (locationFilter) {
-    filtered = filtered.filter((job) =>
-      job.location
-        .toLowerCase()
-        .includes(locationFilter.toLowerCase())
-    );
+  function isEligible(job: any) {
+    if (!profile) return false;
+    const cgpa = Number(profile.cgpa) >= Number(job.minimum_cgpa);
+    const backlogs = profile.active_backlogs <= job.maximum_backlogs;
+    const branch = job.eligible_branches?.includes(profile.branch);
+    const graduation = job.eligible_graduation_years?.includes(profile.graduation_year);
+    return cgpa && backlogs && branch && graduation;
   }
 
-  if (jobTypeFilter) {
-    filtered = filtered.filter(
-      (job) => job.job_type === jobTypeFilter
-    );
-  }
+  useEffect(() => {
+    let filtered = [...jobs];
 
-  if (employmentFilter) {
-    filtered = filtered.filter(
-      (job) => job.employment_type === employmentFilter
-    );
-  }
+    if (search) {
+      filtered = filtered.filter(
+        (job) =>
+          job.title.toLowerCase().includes(search.toLowerCase()) ||
+          job.company_name?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
 
-  if (sortBy === "salary") {
-  filtered.sort(
-    (a, b) =>
-      Number(b.salary_package) - Number(a.salary_package)
-  );
-}
+    if (locationFilter) {
+      filtered = filtered.filter((job) =>
+        job.location?.toLowerCase().includes(locationFilter.toLowerCase())
+      );
+    }
 
-if (sortBy === "deadline") {
-  filtered.sort(
-    (a, b) =>
-      new Date(a.application_deadline).getTime() -
-      new Date(b.application_deadline).getTime()
-  );
-}
+    if (jobTypeFilter) {
+      filtered = filtered.filter((job) => job.job_type === jobTypeFilter);
+    }
 
-if (sortBy === "latest") {
-  filtered.sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() -
-      new Date(a.created_at).getTime()
-  );
-}
+    if (employmentFilter) {
+      filtered = filtered.filter((job) => job.employment_type === employmentFilter);
+    }
 
-  setFilteredJobs(filtered);
-}, [
-  jobs,
-  search,
-  locationFilter,
-  jobTypeFilter,
-  employmentFilter,
-  sortBy,
-]);
+    if (sortBy === "salary") {
+      filtered.sort((a, b) => Number(b.salary_package) - Number(a.salary_package));
+    } else if (sortBy === "deadline") {
+      filtered.sort((a, b) => new Date(a.application_deadline).getTime() - new Date(b.application_deadline).getTime());
+    } else if (sortBy === "latest") {
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    setFilteredJobs(filtered);
+  }, [jobs, search, locationFilter, jobTypeFilter, employmentFilter, sortBy]);
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-10 text-center">
-        Loading jobs...
+      <div style={{ display: "flex", justifyContent: "center", padding: "100px", color: "var(--text-muted)" }}>
+        <Loader2 className="animate-spin" size={32} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-        <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
+    <div style={{ padding: "0 0 32px" }}>
+      <PageHeader
+        title="Job Opportunities"
+        description="Browse and apply for the latest placements and internships."
+        actions={
+          isOffline && (
+            <StatusBadge status="rejected">Offline Mode</StatusBadge>
+          )
+        }
+      />
 
-  <div className="grid gap-4 md:grid-cols-5">
+      <div style={{ padding: "0 28px" }}>
+        <Card style={{ marginBottom: 24 }}>
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+            <input
+              type="text"
+              placeholder="Search by title..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="focus-ring"
+              style={{
+                padding: "10px 14px",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)"
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Location"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="focus-ring"
+              style={{
+                padding: "10px 14px",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)"
+              }}
+            />
+            <select
+              value={jobTypeFilter}
+              onChange={(e) => setJobTypeFilter(e.target.value)}
+              className="focus-ring"
+              style={{
+                padding: "10px 14px",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)"
+              }}
+            >
+              <option value="">All Job Types</option>
+              <option value="placement">Placement</option>
+              <option value="internship">Internship</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="focus-ring"
+              style={{
+                padding: "10px 14px",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-primary)",
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)"
+              }}
+            >
+              <option value="deadline">Deadline</option>
+              <option value="salary">Salary</option>
+              <option value="latest">Latest</option>
+            </select>
+          </div>
+        </Card>
 
-    <input
-      type="text"
-      placeholder="Search by title or company..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500"
-    />
+        <div style={{ display: "grid", gap: 16 }}>
+          {filteredJobs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px", color: "var(--text-muted)", background: "var(--bg-card)", borderRadius: "var(--radius-xl)", border: "1px dashed var(--border-primary)" }}>
+              No jobs found matching your criteria.
+            </div>
+          ) : (
+            filteredJobs.map((job) => {
+              const eligible = isEligible(job);
+              return (
+                <Card key={job.id} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+                    <div>
+                      <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px" }}>
+                        {job.title}
+                      </h2>
+                      <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0, fontWeight: 500 }}>
+                        {job.company_name}
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <StatusBadge status={job.job_type === "placement" ? "approved" : "pending"}>
+                        {job.job_type === "placement" ? "Placement" : "Internship"}
+                      </StatusBadge>
+                      <StatusBadge status={eligible ? "approved" : "rejected"}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          {eligible ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                          {eligible ? "Eligible" : "Not Eligible"}
+                        </div>
+                      </StatusBadge>
+                    </div>
+                  </div>
 
-    <input
-      type="text"
-      placeholder="Location"
-      value={locationFilter}
-      onChange={(e) => setLocationFilter(e.target.value)}
-      className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500"
-    />
+                  <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {job.description}
+                  </p>
 
-    <select
-      value={jobTypeFilter}
-      onChange={(e) => setJobTypeFilter(e.target.value)}
-      className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
-    >
-      <option value="">All Job Types</option>
-      <option value="placement">Placement</option>
-      <option value="internship">Internship</option>
-    </select>
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap", padding: "16px 0", borderTop: "1px solid var(--border-primary)", borderBottom: "1px solid var(--border-primary)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)", fontSize: 13 }}>
+                      <MapPin size={16} color="var(--accent-primary)" />
+                      {job.location}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)", fontSize: 13 }}>
+                      <Banknote size={16} color="var(--success)" />
+                      ₹{Number(job.salary_package).toLocaleString()}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)", fontSize: 13 }}>
+                      <Calendar size={16} color="var(--info)" />
+                      Deadline: {new Date(job.application_deadline).toLocaleDateString()}
+                    </div>
+                  </div>
 
-    <select
-      value={employmentFilter}
-      onChange={(e) => setEmploymentFilter(e.target.value)}
-      className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
-    >
-      <option value="">All Employment Types</option>
-      <option value="full_time">Full Time</option>
-      <option value="part_time">Part Time</option>
-      <option value="internship">Internship</option>
-    </select>
-
-<select
-  value={sortBy}
-  onChange={(e) => setSortBy(e.target.value)}
-  className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white"
->
-  <option value="deadline">Deadline</option>
-  <option value="salary">Salary</option>
-  <option value="latest">Latest</option>
-</select>
-
-  </div>
-
-</div>
-{filteredJobs.map((job) => (
-  <div
-    key={job.id}
-    className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6"
-  >
-    <div className="flex items-start justify-between">
-
-      <div>
-        <h2 className="text-2xl font-semibold">
-          {job.title}
-        </h2>
-
-        <p className="mt-1 text-slate-400">
-          {job.company_name}
-        </p>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Link href={`/student/jobs/${job.id}`} style={{ textDecoration: "none" }}>
+                      <Button>
+                        View Details
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
       </div>
-
-      <div className="flex flex-col items-end gap-3">
-
-        <span className="rounded-full bg-indigo-600/20 px-4 py-2 text-indigo-300">
-          {job.job_type}
-        </span>
-
-        {isEligible(job) ? (
-          <span className="rounded-full bg-green-600/20 px-4 py-2 text-sm font-medium text-green-400">
-            ✅ Eligible
-          </span>
-        ) : (
-          <span className="rounded-full bg-red-600/20 px-4 py-2 text-sm font-medium text-red-400">
-            ❌ Not Eligible
-          </span>
-        )}
-
-      </div>
-
     </div>
-
-    <p className="mt-5 text-slate-300">
-      {job.description}
-    </p>
-
-    <div className="mt-6 grid gap-4 md:grid-cols-4">
-
-      <div>
-        <p className="text-sm text-slate-500">
-          Location
-        </p>
-
-        <p>{job.location}</p>
-      </div>
-
-      <div>
-        <p className="text-sm text-slate-500">
-          Package
-        </p>
-
-        <p>
-          ₹{Number(job.salary_package).toLocaleString()}
-        </p>
-      </div>
-
-      <div>
-        <p className="text-sm text-slate-500">
-          Minimum CGPA
-        </p>
-
-        <p>{job.minimum_cgpa}</p>
-      </div>
-
-      <div>
-        <p className="text-sm text-slate-500">
-          Deadline
-        </p>
-
-        <p>{job.application_deadline}</p>
-      </div>
-
-    </div>
-
-    <div className="mt-6 flex justify-end">
-
-<Link
-  href={`/student/jobs/${job.id}`}
-  className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 font-medium transition hover:opacity-90"
->
-  View Details
-</Link>
- 
-    </div>
-
-  </div>
-))}    </div>
   );
 }
