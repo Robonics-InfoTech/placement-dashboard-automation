@@ -26,9 +26,8 @@ export function useDataSync() {
   const cacheDataLocally = async (tableName: keyof typeof localDb, data: any[]) => {
     if (!data || data.length === 0) return;
     try {
-      // @ts-ignore - Dynamic table access
-      const table = localDb[tableName];
-      if (table) {
+      const table = localDb[tableName] as any;
+      if (table && typeof table.bulkPut === 'function') {
         await table.bulkPut(data);
       }
     } catch (err) {
@@ -45,7 +44,7 @@ export function useDataSync() {
    */
   const fetchWithFallback = useCallback(async <T>(
     tableName: keyof typeof localDb,
-    onlineFetchPromise: Promise<{ data: T[] | null; error: any }>
+    onlineFetchPromise: PromiseLike<{ data: T[] | null; error: any }>
   ) => {
     try {
       // Force error if we know we're offline
@@ -65,9 +64,8 @@ export function useDataSync() {
       setIsOffline(true);
       
       try {
-        // @ts-ignore
-        const table = localDb[tableName];
-        if (!table) throw new Error(`Table ${tableName} not found in local DB.`);
+        const table = localDb[tableName] as any;
+        if (!table || typeof table.toArray !== 'function') throw new Error(`Table ${tableName} not found in local DB.`);
         
         const localData = await table.toArray();
         return { data: localData as T[], error: null, source: "local" as const };
@@ -92,14 +90,14 @@ export function useDataSync() {
       if (error) throw error;
       
       // Update local cache to match
-      // @ts-ignore
-      await localDb[tableName].put({ ...record, is_pending_sync: false });
+      const tbl = localDb[tableName] as any;
+      if (tbl && typeof tbl.put === 'function') await tbl.put({ ...record, is_pending_sync: false });
       return { success: true, offline: false };
     } catch (err) {
       console.warn(`[Sync] Online write failed for ${tableName}. Saving to local queue.`, err);
       
-      // @ts-ignore
-      await localDb[tableName].put({ ...record, is_pending_sync: true });
+      const tbl2 = localDb[tableName] as any;
+      if (tbl2 && typeof tbl2.put === 'function') await tbl2.put({ ...record, is_pending_sync: true });
       return { success: true, offline: true };
     }
   }, []);

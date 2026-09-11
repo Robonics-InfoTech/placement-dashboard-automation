@@ -4,6 +4,8 @@ import { useState, useCallback, FormEvent } from "react";
 import type { UserRole } from "@/types/auth";
 import ImageUpload from "@/components/ui/ImageUpload";
 import { CLD_FOLDERS } from "@/lib/cloudinary";
+import ThemeToggle from "@/components/layout/ThemeToggle";
+import { Eye, EyeOff, Loader2, ChevronRight, ArrowLeft } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,51 +76,26 @@ const ROLES: {
   label: string;
   subtitle: string;
   icon: string;
-  gradient: string;
-  border: string;
 }[] = [
   {
     id: "student",
     label: "Student",
     subtitle: "Find internships, full-time roles & placement drives",
     icon: "🎓",
-    gradient: "from-violet-600/20 to-indigo-600/20",
-    border: "border-violet-500/40",
   },
   {
     id: "employer",
     label: "Employer",
     subtitle: "Post jobs, connect with top campus talent",
     icon: "🏢",
-    gradient: "from-indigo-600/20 to-blue-600/20",
-    border: "border-indigo-500/40",
   },
   {
     id: "college_admin",
     label: "College Admin",
     subtitle: "Manage placements, drives and student outcomes",
     icon: "🏛️",
-    gradient: "from-blue-600/20 to-cyan-600/20",
-    border: "border-blue-500/40",
   },
 ];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  ) : (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -131,8 +108,8 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successEmail, setSuccessEmail] = useState<string>("");
-  // Cloudinary upload URL (photo for student, logo for employer)
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleField = useCallback(
     (field: keyof FormState) =>
@@ -147,7 +124,7 @@ export default function SignupPage() {
     setSelectedRole(role);
     setStep("form");
     setError(null);
-    setUploadedUrl(null); // reset upload when switching roles
+    setUploadedUrl(null);
   };
 
   const handleBack = () => {
@@ -164,10 +141,14 @@ export default function SignupPage() {
       return;
     }
 
+    if (!termsAccepted) {
+      setError("You must accept the Terms & Conditions and Privacy Policy to continue.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    // Build payload per role
     const base = { email: form.email, password: form.password, role: selectedRole };
     let payload: Record<string, unknown> = { ...base };
 
@@ -220,528 +201,310 @@ export default function SignupPage() {
     }
   };
 
+  // ─── Shared input style ──────────────────────────────────────────────────
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 14px",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border-primary)",
+    background: "var(--bg-primary)",
+    color: "var(--text-primary)",
+    fontSize: 14,
+    fontFamily: "var(--font-sans)",
+    outline: "none",
+    transition: "border-color var(--transition-fast)",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--text-primary)",
+    marginBottom: 6,
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  };
+
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg-secondary)",
+        padding: 20,
+        position: "relative",
+      }}
+    >
+      {/* Theme toggle */}
+      <div style={{ position: "absolute", top: 20, right: 20 }}>
+        <ThemeToggle />
+      </div>
 
-        *, *::before, *::after { box-sizing: border-box; }
+      <div style={{ width: "100%", maxWidth: step === "form" ? 480 : 420 }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "var(--radius-lg)",
+              background: "var(--accent-primary)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: 18,
+              fontWeight: 800,
+              marginBottom: 12,
+            }}
+          >
+            P
+          </div>
+          <h1
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              margin: 0,
+            }}
+          >
+            {step === "success" ? "Check your inbox!" : "Create your account"}
+          </h1>
+          {step === "role" && (
+            <p style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 6 }}>
+              Choose how you&apos;ll use PlacementHub
+            </p>
+          )}
+          {step === "form" && selectedRole && (
+            <p style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 6 }}>
+              Fill in your details to get started
+            </p>
+          )}
+        </div>
 
-        .signup-root {
-          min-height: 100vh;
-          background: #070D1B;
-          font-family: 'Inter', sans-serif;
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px 16px;
-        }
-
-        /* Animated background orbs */
-        .orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.18;
-          animation: drift 12s ease-in-out infinite;
-        }
-        .orb-1 {
-          width: 520px; height: 520px;
-          background: #6366F1;
-          top: -140px; left: -120px;
-          animation-delay: 0s;
-        }
-        .orb-2 {
-          width: 420px; height: 420px;
-          background: #8B5CF6;
-          bottom: -100px; right: -100px;
-          animation-delay: -4s;
-        }
-        .orb-3 {
-          width: 280px; height: 280px;
-          background: #06B6D4;
-          top: 50%; left: 60%;
-          animation-delay: -8s;
-        }
-        @keyframes drift {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33%       { transform: translate(30px, -25px) scale(1.05); }
-          66%       { transform: translate(-20px, 20px) scale(0.96); }
-        }
-
-        /* Grid overlay */
-        .grid-overlay {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
-          background-size: 48px 48px;
-          pointer-events: none;
-        }
-
-        /* Card container */
-        .card {
-          position: relative;
-          z-index: 10;
-          width: 100%;
-          max-width: 520px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(99,102,241,0.2);
-          border-radius: 20px;
-          backdrop-filter: blur(24px);
-          box-shadow: 0 0 60px rgba(99,102,241,0.08), 0 32px 64px rgba(0,0,0,0.5);
-          animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        @keyframes slideUp {
-          from { opacity:0; transform: translateY(24px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
-
-        /* Card header */
-        .card-header {
-          padding: 32px 36px 0;
-          text-align: center;
-        }
-        .logo-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: linear-gradient(135deg, #6366F1, #8B5CF6);
-          border-radius: 12px;
-          padding: 8px 16px;
-          margin-bottom: 24px;
-        }
-        .logo-badge span {
-          font-size: 14px;
-          font-weight: 700;
-          color: #fff;
-          letter-spacing: 0.5px;
-        }
-        .card-title {
-          font-size: 26px;
-          font-weight: 800;
-          color: #F1F5FF;
-          margin: 0 0 8px;
-          letter-spacing: -0.5px;
-        }
-        .card-subtitle {
-          font-size: 14px;
-          color: #64748B;
-          margin: 0 0 28px;
-        }
-
-        /* Role selector */
-        .role-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          padding: 0 36px 36px;
-        }
-        .role-card {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 18px 20px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(99,102,241,0.18);
-          border-radius: 14px;
-          cursor: pointer;
-          transition: all 0.22s ease;
-          text-align: left;
-        }
-        .role-card:hover {
-          background: rgba(99,102,241,0.1);
-          border-color: rgba(99,102,241,0.5);
-          transform: translateX(4px);
-          box-shadow: 0 0 20px rgba(99,102,241,0.12);
-        }
-        .role-icon {
-          font-size: 28px;
-          width: 52px;
-          height: 52px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(99,102,241,0.12);
-          border-radius: 12px;
-          flex-shrink: 0;
-        }
-        .role-info h3 {
-          font-size: 15px;
-          font-weight: 600;
-          color: #E2E8F0;
-          margin: 0 0 4px;
-        }
-        .role-info p {
-          font-size: 12px;
-          color: #64748B;
-          margin: 0;
-          line-height: 1.4;
-        }
-        .role-arrow {
-          margin-left: auto;
-          color: #4B5563;
-          flex-shrink: 0;
-          transition: transform 0.2s;
-        }
-        .role-card:hover .role-arrow {
-          transform: translateX(4px);
-          color: #818CF8;
-        }
-
-        /* Divider */
-        .divider {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 0 36px;
-          margin-bottom: 20px;
-        }
-        .divider-line {
-          flex: 1;
-          height: 1px;
-          background: rgba(99,102,241,0.15);
-        }
-        .divider-text {
-          font-size: 11px;
-          color: #374151;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          font-weight: 600;
-        }
-
-        /* Form */
-        .form-body {
-          padding: 0 36px 36px;
-        }
-        .back-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: #6366F1;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 0 0 20px;
-          transition: opacity 0.2s;
-        }
-        .back-btn:hover { opacity: 0.7; }
-
-        .role-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(99,102,241,0.15);
-          border: 1px solid rgba(99,102,241,0.3);
-          border-radius: 20px;
-          padding: 4px 12px;
-          font-size: 12px;
-          font-weight: 500;
-          color: #818CF8;
-          margin-bottom: 20px;
-        }
-
-        .field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-        .field-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-
-        .field {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .field label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #94A3B8;
-          text-transform: uppercase;
-          letter-spacing: 0.6px;
-        }
-        .input-wrap {
-          position: relative;
-        }
-        .field input,
-        .field select {
-          width: 100%;
-          padding: 11px 14px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(99,102,241,0.2);
-          border-radius: 10px;
-          color: #F1F5FF;
-          font-size: 14px;
-          font-family: 'Inter', sans-serif;
-          outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-          -webkit-appearance: none;
-        }
-        .field input::placeholder { color: #374151; }
-        .field input:focus,
-        .field select:focus {
-          border-color: #6366F1;
-          background: rgba(99,102,241,0.07);
-          box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
-        }
-        .field select option { background: #131929; color: #F1F5FF; }
-
-        .pw-toggle {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #4B5563;
-          display: flex;
-          align-items: center;
-          transition: color 0.2s;
-          padding: 0;
-        }
-        .pw-toggle:hover { color: #818CF8; }
-        .field input.has-toggle { padding-right: 42px; }
-
-        .hint {
-          font-size: 11px;
-          color: #374151;
-          margin-top: 2px;
-        }
-
-        /* Submit button */
-        .submit-btn {
-          width: 100%;
-          padding: 13px;
-          background: linear-gradient(135deg, #6366F1, #8B5CF6);
-          color: #fff;
-          font-size: 15px;
-          font-weight: 700;
-          font-family: 'Inter', sans-serif;
-          border: none;
-          border-radius: 12px;
-          cursor: pointer;
-          margin-top: 20px;
-          position: relative;
-          overflow: hidden;
-          transition: opacity 0.2s, transform 0.15s;
-          letter-spacing: 0.2px;
-        }
-        .submit-btn::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: rgba(255,255,255,0);
-          transition: background 0.2s;
-        }
-        .submit-btn:hover::after { background: rgba(255,255,255,0.08); }
-        .submit-btn:active { transform: scale(0.98); }
-        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-        /* Spinner */
-        .spinner {
-          display: inline-block;
-          width: 16px; height: 16px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-          vertical-align: middle;
-          margin-right: 8px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Error alert */
-        .error-alert {
-          background: rgba(239,68,68,0.1);
-          border: 1px solid rgba(239,68,68,0.3);
-          border-radius: 10px;
-          padding: 12px 14px;
-          margin-top: 16px;
-          font-size: 13px;
-          color: #FCA5A5;
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-        }
-
-        /* Sign in link */
-        .signin-row {
-          text-align: center;
-          padding: 20px 36px;
-          border-top: 1px solid rgba(99,102,241,0.1);
-          font-size: 13px;
-          color: #4B5563;
-        }
-        .signin-row a {
-          color: #818CF8;
-          text-decoration: none;
-          font-weight: 600;
-          margin-left: 4px;
-          transition: opacity 0.2s;
-        }
-        .signin-row a:hover { opacity: 0.75; }
-
-        /* Success screen */
-        .success-body {
-          padding: 36px;
-          text-align: center;
-        }
-        .success-icon {
-          font-size: 56px;
-          margin-bottom: 20px;
-          display: block;
-          animation: pop 0.5s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        @keyframes pop {
-          from { opacity:0; transform: scale(0.5); }
-          to   { opacity:1; transform: scale(1); }
-        }
-        .success-title {
-          font-size: 22px;
-          font-weight: 800;
-          color: #F1F5FF;
-          margin: 0 0 10px;
-        }
-        .success-sub {
-          font-size: 14px;
-          color: #64748B;
-          margin: 0 0 8px;
-          line-height: 1.6;
-        }
-        .success-email {
-          font-size: 14px;
-          font-weight: 600;
-          color: #818CF8;
-          margin: 0 0 24px;
-          word-break: break-all;
-        }
-        .success-tip {
-          font-size: 12px;
-          color: #374151;
-          background: rgba(99,102,241,0.07);
-          border: 1px solid rgba(99,102,241,0.15);
-          border-radius: 8px;
-          padding: 10px 14px;
-          line-height: 1.5;
-        }
-      `}</style>
-
-      <div className="signup-root">
-        {/* Background */}
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="orb orb-3" />
-        <div className="grid-overlay" />
-
-        <div className="card">
+        {/* Card */}
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-primary)",
+            borderRadius: "var(--radius-xl)",
+            boxShadow: "var(--shadow-md)",
+            overflow: "hidden",
+          }}
+        >
           {/* ── Step: Role selector ─────────────────────────────────── */}
           {step === "role" && (
             <>
-              <div className="card-header">
-                <div className="logo-badge">
-                  <span>🎯 PlacementHub</span>
-                </div>
-                <h1 className="card-title">Create your account</h1>
-                <p className="card-subtitle">
-                  Choose how you&apos;ll use PlacementHub
-                </p>
+              {/* Divider */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "20px 24px 0",
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "var(--border-primary)",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                    fontWeight: 600,
+                  }}
+                >
+                  I am a
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "var(--border-primary)",
+                  }}
+                />
               </div>
 
-              <div className="divider">
-                <div className="divider-line" />
-                <span className="divider-text">I am a</span>
-                <div className="divider-line" />
-              </div>
-
-              <div className="role-grid">
+              {/* Role cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px 24px 24px" }}>
                 {ROLES.map((r) => (
                   <button
                     key={r.id}
                     id={`role-${r.id}`}
-                    className="role-card"
                     onClick={() => handleRoleSelect(r.id)}
                     type="button"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 14,
+                      padding: "14px 16px",
+                      background: "var(--bg-primary)",
+                      border: "1px solid var(--border-primary)",
+                      borderRadius: "var(--radius-lg)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "all var(--transition-fast)",
+                      width: "100%",
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget;
+                      el.style.borderColor = "var(--accent-primary)";
+                      el.style.background = "var(--accent-lighter)";
+                      el.style.transform = "translateX(2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget;
+                      el.style.borderColor = "var(--border-primary)";
+                      el.style.background = "var(--bg-primary)";
+                      el.style.transform = "translateX(0)";
+                    }}
                   >
-                    <div className="role-icon">{r.icon}</div>
-                    <div className="role-info">
-                      <h3>{r.label}</h3>
-                      <p>{r.subtitle}</p>
+                    <div
+                      style={{
+                        fontSize: 24,
+                        width: 44,
+                        height: 44,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "var(--accent-light)",
+                        borderRadius: "var(--radius-md)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {r.icon}
                     </div>
-                    <svg className="role-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                          marginBottom: 2,
+                        }}
+                      >
+                        {r.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                        {r.subtitle}
+                      </div>
+                    </div>
+                    <ChevronRight size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
                   </button>
                 ))}
               </div>
 
-              <div className="signin-row">
-                Already have an account?
-                <a href="/auth/login" id="link-to-login">Sign in</a>
+              {/* Footer link */}
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "16px 24px",
+                  borderTop: "1px solid var(--border-primary)",
+                  fontSize: 14,
+                  color: "var(--text-secondary)",
+                }}
+              >
+                Already have an account?{" "}
+                <a
+                  href="/auth/login"
+                  id="link-to-login"
+                  style={{ color: "var(--accent-text)", textDecoration: "none", fontWeight: 600 }}
+                >
+                  Sign in
+                </a>
               </div>
             </>
           )}
 
           {/* ── Step: Form ──────────────────────────────────────────── */}
           {step === "form" && selectedRole && (
-            <>
-              <div className="card-header">
-                <div className="logo-badge">
-                  <span>🎯 PlacementHub</span>
-                </div>
-                <h1 className="card-title">
-                  {selectedRole === "student" && "Student Sign Up"}
-                  {selectedRole === "employer" && "Employer Sign Up"}
-                  {selectedRole === "college_admin" && "College Admin Sign Up"}
-                </h1>
-                <p className="card-subtitle">Fill in your details below</p>
-              </div>
-
-              <form className="form-body" onSubmit={handleSubmit} noValidate>
+            <form onSubmit={handleSubmit} noValidate style={{ padding: "24px 28px" }}>
+              {/* Back + Role badge */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 20,
+                }}
+              >
                 <button
                   type="button"
-                  className="back-btn"
-                  onClick={handleBack}
                   id="btn-back-to-role"
+                  onClick={handleBack}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 13,
+                    color: "var(--accent-text)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontFamily: "var(--font-sans)",
+                    fontWeight: 500,
+                  }}
                 >
-                  ← Back
+                  <ArrowLeft size={14} />
+                  Back
                 </button>
 
-                <div className="role-badge">
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "var(--accent-light)",
+                    border: "1px solid var(--accent-primary)",
+                    borderRadius: "var(--radius-full)",
+                    padding: "3px 10px",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: "var(--accent-text)",
+                  }}
+                >
                   {ROLES.find((r) => r.id === selectedRole)?.icon}{" "}
                   {ROLES.find((r) => r.id === selectedRole)?.label}
-                </div>
+                </span>
+              </div>
 
-                <div className="field-group">
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* ── Student fields ──────────────────────────────── */}
+                {selectedRole === "student" && (
+                  <>
+                    <div style={fieldStyle}>
+                      <label htmlFor="full_name" style={labelStyle}>Full Name</label>
+                      <input
+                        id="full_name"
+                        type="text"
+                        placeholder="Aarav Sharma"
+                        value={form.full_name}
+                        onChange={handleField("full_name")}
+                        required
+                        autoComplete="name"
+                        className="focus-ring"
+                        style={inputStyle}
+                      />
+                    </div>
 
-                  {/* ── Student fields ──────────────────────────────── */}
-                  {selectedRole === "student" && (
-                    <>
-                      <div className="field">
-                        <label htmlFor="full_name">Full Name</label>
-                        <input
-                          id="full_name"
-                          type="text"
-                          placeholder="Aarav Sharma"
-                          value={form.full_name}
-                          onChange={handleField("full_name")}
-                          required
-                          autoComplete="name"
-                        />
-                      </div>
-
-                      <div className="field">
-                        <label htmlFor="batch_year">Passout Year</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div style={fieldStyle}>
+                        <label htmlFor="batch_year" style={labelStyle}>Passout Year</label>
                         <input
                           id="batch_year"
                           type="number"
@@ -751,16 +514,20 @@ export default function SignupPage() {
                           min="2000"
                           max="2040"
                           required
+                          className="focus-ring"
+                          style={inputStyle}
                         />
                       </div>
 
-                      <div className="field">
-                        <label htmlFor="branch">Branch</label>
+                      <div style={fieldStyle}>
+                        <label htmlFor="branch" style={labelStyle}>Branch</label>
                         <select
                           id="branch"
                           value={form.branch}
                           onChange={handleField("branch")}
                           required
+                          className="focus-ring"
+                          style={inputStyle}
                         >
                           <option value="">Select branch…</option>
                           {BRANCHES.map((b) => (
@@ -768,249 +535,406 @@ export default function SignupPage() {
                           ))}
                         </select>
                       </div>
+                    </div>
 
-                      <div className="field">
-                        <label htmlFor="enrollment_key">College Enrollment Key</label>
-                        <input
-                          id="enrollment_key"
-                          type="text"
-                          placeholder="Provided by your TPO"
-                          value={form.enrollment_key}
-                          onChange={handleField("enrollment_key")}
-                          required
-                        />
-                        <span className="hint">Ask your Training &amp; Placement Officer for this key.</span>
-                      </div>
-                    </>
-                  )}
-
-                  {/* ── Employer fields ─────────────────────────────── */}
-                  {selectedRole === "employer" && (
-                    <>
-                      <div className="field">
-                        <label htmlFor="company_name">Company Name</label>
-                        <input
-                          id="company_name"
-                          type="text"
-                          placeholder="Acme Corp Pvt. Ltd."
-                          value={form.company_name}
-                          onChange={handleField("company_name")}
-                          required
-                        />
-                      </div>
-
-                      <div className="field-row">
-                        <div className="field">
-                          <label htmlFor="industry">Industry</label>
-                          <select
-                            id="industry"
-                            value={form.industry}
-                            onChange={handleField("industry")}
-                            required
-                          >
-                            <option value="">Select…</option>
-                            {INDUSTRIES.map((i) => (
-                              <option key={i} value={i}>{i}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="field">
-                          <label htmlFor="hq_location">HQ Location</label>
-                          <input
-                            id="hq_location"
-                            type="text"
-                            placeholder="Bengaluru, KA"
-                            value={form.hq_location}
-                            onChange={handleField("hq_location")}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="field">
-                        <label htmlFor="hr_contact_name">HR Contact Name</label>
-                        <input
-                          id="hr_contact_name"
-                          type="text"
-                          placeholder="Priya Mehta"
-                          value={form.hr_contact_name}
-                          onChange={handleField("hr_contact_name")}
-                          required
-                        />
-                      </div>
-
-                      <ImageUpload
-                        folder={CLD_FOLDERS.employerLogos}
-                        label="Company Logo"
-                        placeholder="Upload your company logo (optional)"
-                        onUpload={(url) => setUploadedUrl(url)}
+                    <div style={fieldStyle}>
+                      <label htmlFor="enrollment_key" style={labelStyle}>College Enrollment Key</label>
+                      <input
+                        id="enrollment_key"
+                        type="text"
+                        placeholder="Provided by your TPO"
+                        value={form.enrollment_key}
+                        onChange={handleField("enrollment_key")}
+                        required
+                        className="focus-ring"
+                        style={inputStyle}
                       />
-                    </>
-                  )}
+                      <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                        Ask your Training &amp; Placement Officer for this key.
+                      </span>
+                    </div>
+                  </>
+                )}
 
-                  {/* ── College Admin fields ─────────────────────────── */}
-                  {selectedRole === "college_admin" && (
-                    <>
-                      <div className="field">
-                        <label htmlFor="full_name">Full Name</label>
-                        <input
-                          id="full_name"
-                          type="text"
-                          placeholder="Dr. Rajesh Kumar"
-                          value={form.full_name}
-                          onChange={handleField("full_name")}
+                {/* ── Employer fields ─────────────────────────────── */}
+                {selectedRole === "employer" && (
+                  <>
+                    <div style={fieldStyle}>
+                      <label htmlFor="company_name" style={labelStyle}>Company Name</label>
+                      <input
+                        id="company_name"
+                        type="text"
+                        placeholder="Acme Corp Pvt. Ltd."
+                        value={form.company_name}
+                        onChange={handleField("company_name")}
+                        required
+                        className="focus-ring"
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div style={fieldStyle}>
+                        <label htmlFor="industry" style={labelStyle}>Industry</label>
+                        <select
+                          id="industry"
+                          value={form.industry}
+                          onChange={handleField("industry")}
                           required
-                          autoComplete="name"
+                          className="focus-ring"
+                          style={inputStyle}
+                        >
+                          <option value="">Select…</option>
+                          {INDUSTRIES.map((i) => (
+                            <option key={i} value={i}>{i}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={fieldStyle}>
+                        <label htmlFor="hq_location" style={labelStyle}>HQ Location</label>
+                        <input
+                          id="hq_location"
+                          type="text"
+                          placeholder="Bengaluru, KA"
+                          value={form.hq_location}
+                          onChange={handleField("hq_location")}
+                          required
+                          className="focus-ring"
+                          style={inputStyle}
                         />
                       </div>
+                    </div>
 
-                      <div className="field">
-                        <label htmlFor="designation">Designation</label>
-                        <input
-                          id="designation"
-                          type="text"
-                          placeholder="Training & Placement Officer"
-                          value={form.designation}
-                          onChange={handleField("designation")}
-                          required
-                        />
-                      </div>
-                    </>
-                  )}
+                    <div style={fieldStyle}>
+                      <label htmlFor="hr_contact_name" style={labelStyle}>HR Contact Name</label>
+                      <input
+                        id="hr_contact_name"
+                        type="text"
+                        placeholder="Priya Mehta"
+                        value={form.hr_contact_name}
+                        onChange={handleField("hr_contact_name")}
+                        required
+                        className="focus-ring"
+                        style={inputStyle}
+                      />
+                    </div>
 
-                  {/* ── Common: email + password ─────────────────────── */}
-                  <div className="field">
-                    <label htmlFor="email">Email Address</label>
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder={
-                        selectedRole === "student"
-                          ? "aarav@college.edu"
-                          : selectedRole === "employer"
-                          ? "hr@company.com"
-                          : "tpo@college.edu"
-                      }
-                      value={form.email}
-                      onChange={handleField("email")}
-                      required
-                      autoComplete="email"
+                    <ImageUpload
+                      folder={CLD_FOLDERS.employerLogos}
+                      label="Company Logo"
+                      placeholder="Upload your company logo (optional)"
+                      onUpload={(url) => setUploadedUrl(url)}
                     />
-                  </div>
+                  </>
+                )}
 
-                  <div className="field-row">
-                    <div className="field">
-                      <label htmlFor="password">Password</label>
-                      <div className="input-wrap">
-                        <input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Min 8 characters"
-                          value={form.password}
-                          onChange={handleField("password")}
-                          required
-                          autoComplete="new-password"
-                          className="has-toggle"
-                        />
-                        <button
-                          type="button"
-                          className="pw-toggle"
-                          onClick={() => setShowPassword((p) => !p)}
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                        >
-                          <EyeIcon open={showPassword} />
-                        </button>
-                      </div>
+                {/* ── College Admin fields ─────────────────────────── */}
+                {selectedRole === "college_admin" && (
+                  <>
+                    <div style={fieldStyle}>
+                      <label htmlFor="full_name" style={labelStyle}>Full Name</label>
+                      <input
+                        id="full_name"
+                        type="text"
+                        placeholder="Dr. Rajesh Kumar"
+                        value={form.full_name}
+                        onChange={handleField("full_name")}
+                        required
+                        autoComplete="name"
+                        className="focus-ring"
+                        style={inputStyle}
+                      />
                     </div>
 
-                    <div className="field">
-                      <label htmlFor="confirm_password">Confirm Password</label>
-                      <div className="input-wrap">
-                        <input
-                          id="confirm_password"
-                          type={showConfirm ? "text" : "password"}
-                          placeholder="Repeat password"
-                          value={form.confirmPassword}
-                          onChange={handleField("confirmPassword")}
-                          required
-                          autoComplete="new-password"
-                          className="has-toggle"
-                        />
-                        <button
-                          type="button"
-                          className="pw-toggle"
-                          onClick={() => setShowConfirm((p) => !p)}
-                          aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
-                        >
-                          <EyeIcon open={showConfirm} />
-                        </button>
-                      </div>
+                    <div style={fieldStyle}>
+                      <label htmlFor="designation" style={labelStyle}>Designation</label>
+                      <input
+                        id="designation"
+                        type="text"
+                        placeholder="Training & Placement Officer"
+                        value={form.designation}
+                        onChange={handleField("designation")}
+                        required
+                        className="focus-ring"
+                        style={inputStyle}
+                      />
                     </div>
-                  </div>
 
-                  <span className="hint">
-                    Must be 8+ characters with uppercase, lowercase and a number.
-                  </span>
+                    <div style={fieldStyle}>
+                      <label htmlFor="enrollment_key" style={labelStyle}>College Enrollment Key</label>
+                      <input
+                        id="enrollment_key"
+                        type="text"
+                        placeholder="Provided by your institution"
+                        value={form.enrollment_key}
+                        onChange={handleField("enrollment_key")}
+                        required
+                        className="focus-ring"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ── Common: email ─────────────────────────────────── */}
+                <div style={fieldStyle}>
+                  <label htmlFor="email" style={labelStyle}>Email Address</label>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder={
+                      selectedRole === "student"
+                        ? "aarav@college.edu"
+                        : selectedRole === "employer"
+                        ? "hr@company.com"
+                        : "tpo@college.edu"
+                    }
+                    value={form.email}
+                    onChange={handleField("email")}
+                    required
+                    autoComplete="email"
+                    className="focus-ring"
+                    style={inputStyle}
+                  />
                 </div>
+
+                {/* ── Password row ──────────────────────────────────── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={fieldStyle}>
+                    <label htmlFor="password" style={labelStyle}>Password</label>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min 8 characters"
+                        value={form.password}
+                        onChange={handleField("password")}
+                        required
+                        autoComplete="new-password"
+                        className="focus-ring"
+                        style={{ ...inputStyle, paddingRight: 40 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((p) => !p)}
+                        style={{
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--text-muted)",
+                          display: "flex",
+                          padding: 4,
+                        }}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={fieldStyle}>
+                    <label htmlFor="confirm_password" style={labelStyle}>Confirm Password</label>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        id="confirm_password"
+                        type={showConfirm ? "text" : "password"}
+                        placeholder="Repeat password"
+                        value={form.confirmPassword}
+                        onChange={handleField("confirmPassword")}
+                        required
+                        autoComplete="new-password"
+                        className="focus-ring"
+                        style={{ ...inputStyle, paddingRight: 40 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm((p) => !p)}
+                        style={{
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--text-muted)",
+                          display: "flex",
+                          padding: 4,
+                        }}
+                        aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                      >
+                        {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  Must be 8+ characters with uppercase, lowercase and a number.
+                </span>
+
+                {/* T&C checkbox */}
+                <label
+                  style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginTop: 4 }}
+                  htmlFor="terms-checkbox"
+                >
+                  <input
+                    id="terms-checkbox"
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={e => { setTermsAccepted(e.target.checked); setError(null); }}
+                    style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0, accentColor: "var(--accent-primary)", cursor: "pointer" }}
+                  />
+                  <span style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                    I have read and agree to the{" "}
+                    <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-text)", textDecoration: "none", fontWeight: 600 }}>Terms &amp; Conditions</a>
+                    {" "}and{" "}
+                    <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-text)", textDecoration: "none", fontWeight: 600 }}>Privacy Policy</a>.
+                    I consent to PlacementHub processing my personal data as described therein.
+                  </span>
+                </label>
 
                 {/* Error */}
                 {error && (
-                  <div className="error-alert" role="alert">
-                    <span>⚠️</span>
-                    <span>{error}</span>
+                  <div
+                    role="alert"
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: "var(--radius-md)",
+                      background: "var(--error-light)",
+                      color: "var(--error-text)",
+                      fontSize: 13,
+                      fontWeight: 500,
+                    }}
+                  >
+                    ⚠️ {error}
                   </div>
                 )}
 
+                {/* Submit */}
                 <button
                   id="btn-create-account"
                   type="submit"
-                  className="submit-btn"
                   disabled={loading}
+                  className="focus-ring"
+                  style={{
+                    padding: "12px",
+                    borderRadius: "var(--radius-md)",
+                    border: "none",
+                    background: "var(--accent-primary)",
+                    color: "white",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.7 : 1,
+                    fontFamily: "var(--font-sans)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    transition: "all var(--transition-fast)",
+                    marginTop: 4,
+                  }}
                 >
-                  {loading ? (
-                    <>
-                      <span className="spinner" aria-hidden="true" />
-                      Creating account…
-                    </>
-                  ) : (
-                    "Create Account →"
-                  )}
+                  {loading && <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />}
+                  {loading ? "Creating account…" : "Create Account →"}
                 </button>
-              </form>
-
-              <div className="signin-row">
-                Already have an account?
-                <a href="/auth/login" id="link-to-login-form">Sign in</a>
               </div>
-            </>
+            </form>
           )}
 
           {/* ── Step: Success ───────────────────────────────────────── */}
           {step === "success" && (
-            <div className="success-body">
-              <span className="success-icon" role="img" aria-label="Email sent">
+            <div style={{ padding: "36px 28px", textAlign: "center" }}>
+              <span
+                role="img"
+                aria-label="Email sent"
+                style={{
+                  fontSize: 52,
+                  display: "block",
+                  marginBottom: 20,
+                  animation: "pop 0.5s cubic-bezier(0.16,1,0.3,1) both",
+                }}
+              >
                 📬
               </span>
-              <h1 className="success-title">Check your inbox!</h1>
-              <p className="success-sub">
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 8, lineHeight: 1.6 }}>
                 We sent a verification link to
               </p>
-              <p className="success-email">{successEmail}</p>
-              <p className="success-tip">
+              <p
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "var(--accent-text)",
+                  marginBottom: 24,
+                  wordBreak: "break-all",
+                }}
+              >
+                {successEmail}
+              </p>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--text-secondary)",
+                  background: "var(--accent-lighter)",
+                  border: "1px solid var(--border-primary)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "10px 14px",
+                  lineHeight: 1.6,
+                }}
+              >
                 Click the link in the email to activate your account. <br />
                 Didn&apos;t receive it? Check your spam folder or{" "}
                 <a
                   href="/auth/signup"
-                  style={{ color: "#818CF8", textDecoration: "none", fontWeight: 600 }}
+                  style={{ color: "var(--accent-text)", textDecoration: "none", fontWeight: 600 }}
                 >
                   try again
                 </a>
                 .
-              </p>
+              </div>
+            </div>
+          )}
+
+          {/* Footer link (form step) */}
+          {step === "form" && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "16px 28px",
+                borderTop: "1px solid var(--border-primary)",
+                fontSize: 14,
+                color: "var(--text-secondary)",
+              }}
+            >
+              Already have an account?{" "}
+              <a
+                href="/auth/login"
+                id="link-to-login-form"
+                style={{ color: "var(--accent-text)", textDecoration: "none", fontWeight: 600 }}
+              >
+                Sign in
+              </a>
             </div>
           )}
         </div>
       </div>
-    </>
+
+      {/* Spinner + pop keyframes */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pop {
+          from { opacity: 0; transform: scale(0.5); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
   );
 }

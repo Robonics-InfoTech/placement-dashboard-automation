@@ -28,10 +28,10 @@ export default function EmployerJobsList({ employerProfileId, isApproved }: Empl
 
         // Fetch jobs for this employer using the offline sync hook
         const jobsPromise = supabase
-          .from("job_postings")
-          .select("id, title, job_type, status, deadline, openings, created_at")
-          .eq("employer_id", employerProfileId)
-          .order("created_at", { ascending: false });
+            .from("job_postings")
+            .select("id, title, job_type, status, deadline, openings, created_at")
+            .eq("employer_id", employerProfileId)
+            .order("created_at", { ascending: false });
 
         const { data } = await fetchWithFallback("jobs", jobsPromise);
         if (data) setJobs(data);
@@ -60,7 +60,7 @@ export default function EmployerJobsList({ employerProfileId, isApproved }: Empl
         description="Manage all your job listings here."
         actions={
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            {isOffline && <StatusBadge status="rejected">Offline Mode</StatusBadge>}
+            {isOffline && <StatusBadge status="warning" label="Offline Mode" />}
             <Link href="/employer/jobs/new" style={{ textDecoration: "none" }}>
               <Button disabled={!isApproved}>
                 + New Job
@@ -147,13 +147,14 @@ export default function EmployerJobsList({ employerProfileId, isApproved }: Empl
                       {fmt(job.deadline)}
                     </td>
                     <td style={{ padding: "16px 24px" }}>
-                      <StatusBadge status={job.status === "active" || job.status === "published" ? "approved" : "pending"}>
-                        {job.status}
-                      </StatusBadge>
+                      <StatusBadge
+                        status={job.status === "active" || job.status === "published" ? "success" : "pending"}
+                        label={job.status}
+                      />
                     </td>
                     <td style={{ padding: "16px 24px" }}>
                       <Link href={`/employer/jobs/${job.id}/applicants`} style={{ textDecoration: "none" }}>
-                        <Button variant="outline" size="sm">
+                        <Button variant="secondary" size="sm">
                           View Applicants
                         </Button>
                       </Link>

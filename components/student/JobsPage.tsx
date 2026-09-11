@@ -117,7 +117,7 @@ export default function JobsPage() {
         description="Browse and apply for the latest placements and internships."
         actions={
           isOffline && (
-            <StatusBadge status="rejected">Offline Mode</StatusBadge>
+            <StatusBadge status="warning" label="Offline Mode" />
           )
         }
       />

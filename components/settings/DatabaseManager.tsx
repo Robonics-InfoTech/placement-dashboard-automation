@@ -123,7 +123,7 @@ export default function DatabaseManager() {
               width: "100%"
             }}
           />
-          <Button variant="outline" disabled={isExporting || isImporting} style={{ gap: 8, pointerEvents: "none" }}>
+          <Button variant="secondary" disabled={isExporting || isImporting} style={{ gap: 8, pointerEvents: "none" }}>
             {isImporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
             Import Data
           </Button>

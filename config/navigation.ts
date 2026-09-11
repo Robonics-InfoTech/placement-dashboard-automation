@@ -12,14 +12,14 @@ export const STUDENT_NAV: RoleNavigation = {
       label: "OVERVIEW",
       items: [
         { label: "Dashboard", href: "/student/dashboard", icon: "LayoutDashboard" },
-        { label: "Getting Started", href: "/student/getting-started", icon: "Rocket", comingSoon: true },
+        { label: "Getting Started", href: "/student/getting-started", icon: "Rocket" },
         { label: "My Data Export", href: "/student/data-export", icon: "Download", comingSoon: true },
       ],
     },
     {
       label: "OPPORTUNITIES",
       items: [
-        { label: "Browse Drives", href: "/student/drives", icon: "Target", comingSoon: true },
+        { label: "Browse Drives", href: "/student/drives", icon: "Target" },
         { label: "Browse Internships", href: "/student/internships", icon: "GraduationCap", comingSoon: true },
         { label: "Browse Projects", href: "/student/projects", icon: "FolderKanban", comingSoon: true },
         { label: "Browse Hackathons", href: "/student/hackathons", icon: "Trophy", comingSoon: true },
@@ -29,15 +29,15 @@ export const STUDENT_NAV: RoleNavigation = {
       label: "MY APPLICATIONS",
       items: [
         { label: "My Drives", href: "/student/applications", icon: "FileText" },
-        { label: "My Internships", href: "/student/my-internships", icon: "Briefcase", comingSoon: true },
-        { label: "My Interviews", href: "/student/interviews", icon: "Video", comingSoon: true },
+        { label: "My Internships", href: "/student/my-internships", icon: "Briefcase" },
+        { label: "My Interviews", href: "/student/interviews", icon: "Video" },
         { label: "My Offers", href: "/student/offers", icon: "Gift" },
       ],
     },
     {
       label: "CAREER SERVICES",
       items: [
-        { label: "Mentor Connect", href: "/student/mentors", icon: "Users", comingSoon: true },
+        { label: "Mentor Connect", href: "/student/mentors", icon: "Users" },
         { label: "Resume Review", href: "/student/resume-review", icon: "FileSearch", comingSoon: true },
       ],
     },
@@ -46,7 +46,7 @@ export const STUDENT_NAV: RoleNavigation = {
       items: [
         { label: "Notifications", href: "/student/notifications", icon: "Bell" },
         { label: "Announcements", href: "/student/announcements", icon: "Megaphone", comingSoon: true },
-        { label: "Feedback", href: "/student/feedback", icon: "MessageSquare", comingSoon: true },
+        { label: "Feedback", href: "/student/feedback", icon: "MessageSquare" },
       ],
     },
     {
@@ -94,8 +94,8 @@ export const ALUMNI_NAV: RoleNavigation = {
     {
       label: "COMMUNICATION",
       items: [
-        { label: "Notifications", href: "/alumni/notifications", icon: "Bell", comingSoon: true },
-        { label: "Feedback", href: "/alumni/feedback", icon: "MessageSquare", comingSoon: true },
+        { label: "Notifications", href: "/alumni/notifications", icon: "Bell" },
+        { label: "Feedback", href: "/alumni/feedback", icon: "MessageSquare" },
       ],
     },
     {
